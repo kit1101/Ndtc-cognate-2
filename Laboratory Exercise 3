@@ -1,0 +1,102 @@
+#include <Wire.h>
+#include <Adafruit_LiquidCrystal.h>
+#include <Keypad.h>
+
+const byte ROWS = 4;
+const byte COLS = 4;
+
+char keys[ROWS][COLS] = {
+  {'1', '2', '3', '+'},
+  {'4', '5', '6', '-'},
+  {'7', '8', '9', '*'},
+  {'C', '0', '=', '/'}
+};
+
+byte rowPins[ROWS] = {9, 8, 7, 6};
+byte colPins[COLS] = {5, 4, 3, 2};
+
+Keypad keypad = Keypad(makeKeymap(keys), rowPins, colPins, ROWS, COLS);
+
+int firstNumber = 0;
+int secondNumber = 0;
+char operation = '\0';
+
+Adafruit_LiquidCrystal lcd(0);
+
+double getValueFromSerial() {
+  char value[17];
+  int index = 0;
+
+  // Read the input from the serial monitor until a newline character is received
+  while (true) {
+    if (Serial.available()) {
+      char c = Serial.read();
+      if (c == '\n') {
+        break;
+      } else {
+        value[index++] = c;
+      }
+    }
+  }
+
+  // Convert the input string to a double value
+  value[index] = '\0';
+  return atof(value);
+}
+
+void setup() {
+  Serial.begin(9600);
+  lcd.begin(16, 2);
+  lcd.setCursor(0, 0);
+  lcd.print("Calculator");
+  delay(1000);
+  lcd.clear();
+}
+
+void loop() {
+  char key = keypad.getKey();
+
+  if (key != NO_KEY) {
+    if (key >= '0' && key <= '9') {
+      if (operation == '\0') {
+        // If no operation has been selected yet, add the digit to the first number
+        firstNumber = firstNumber * 10 + (key - '0');
+        lcd.print(key);
+      } else {
+        // If an operation has been selected, add the digit to the second number
+        secondNumber = secondNumber * 10 + (key - '0');
+        lcd.print(key);
+      }
+    } else if (key == '+' || key == '-' || key == '*' || key == '/') {
+      // Select the operation
+      operation = key;
+      lcd.print(operation);
+    } else if (key == '=') {
+      // Perform the operation and display the result
+      if (operation == '+') {
+        lcd.setCursor(0, 1);
+        lcd.print(firstNumber + secondNumber);
+      } else if (operation == '-') {
+        lcd.setCursor(0, 1);
+        lcd.print(firstNumber - secondNumber);
+      } else if (operation == '*') {
+        lcd.setCursor(0, 1);
+        lcd.print(firstNumber * secondNumber);
+      } else if (operation == '/') {
+        lcd.setCursor(0, 1);
+        lcd.print(firstNumber / secondNumber);
+      }
+
+      // Reset the calculator
+      firstNumber = 0.0;
+      secondNumber = 0.0;
+      operation = '\0';
+    } else if (key == 'C') {
+      // Clear the calculator
+      firstNumber = 0.0;
+      secondNumber = 0.0;
+      operation = '\0';
+      lcd.clear();
+    }
+  }
+}
